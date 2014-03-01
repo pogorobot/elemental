@@ -36,12 +36,13 @@ Crafty.scene('Loading', function() {
     Crafty.sprite(72, 'assets/wood.png', {
       spr_wood: [0, 0]
     });
-  });
 
-  Crafty.scene('Game');
+    Crafty.scene('Game');
+  });
 });
 
 Crafty.scene('Game', function() {
+  var w, h;
   for (w = 0; w < Game.map_grid.width; w++) {
     for (h = 0; h < Game.map_grid.height; h++) {
       Crafty.e('Tile').at(w, h).getColorRight();
