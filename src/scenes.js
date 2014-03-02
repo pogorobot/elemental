@@ -8,18 +8,14 @@ Crafty.scene('Loading', function() {
 
   Crafty.load([
     'assets/air.png',
-    'assets/chaos.png',
     'assets/earth.png',
     'assets/fire.png',
-    'assets/spirit.png',
     'assets/water.png',
+    'assets/metal.png',
     'assets/wood.png'
   ], function() {
     Crafty.sprite(72, 'assets/air.png', {
       spr_air: [0, 0]
-    });
-    Crafty.sprite(72, 'assets/chaos.png', {
-      spr_chaos: [0, 0]
     });
     Crafty.sprite(72, 'assets/earth.png', {
       spr_earth: [0, 0]
@@ -27,11 +23,11 @@ Crafty.scene('Loading', function() {
     Crafty.sprite(72, 'assets/fire.png', {
       spr_fire: [0, 0]
     });
-    Crafty.sprite(72, 'assets/spirit.png', {
-      spr_spirit: [0, 0]
-    });
     Crafty.sprite(72, 'assets/water.png', {
       spr_water: [0, 0]
+    });
+    Crafty.sprite(72, 'assets/metal.png', {
+      spr_metal: [0, 0]
     });
     Crafty.sprite(72, 'assets/wood.png', {
       spr_wood: [0, 0]

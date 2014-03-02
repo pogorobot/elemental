@@ -21,11 +21,10 @@ Crafty.c('Gem', {
   },
   possible_sprites: [
     'spr_air',
-    'spr_chaos',
     'spr_earth',
     'spr_fire',
-    'spr_spirit',
     'spr_water',
+    'spr_metal',
     'spr_wood',
   ]
 });
