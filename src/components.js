@@ -1,6 +1,7 @@
 Crafty.c('Tile', {
   init: function() {
     this.requires('Actor, Color');
+    this._globalZ = 0;
   },
   getColorRight: function() {
     if ((this.tileX + this.tileY) % 2 == 0) {
@@ -16,6 +17,7 @@ Crafty.c('Gem', {
   init: function() {
     this.requires('Actor');
     this.requires(this.possible_sprites[Math.floor(Math.random() * this.possible_sprites.length)]);
+    this._globalZ = 1;
   },
   possible_sprites: [
     'spr_air',
