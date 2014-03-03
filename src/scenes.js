@@ -42,7 +42,7 @@ Crafty.scene('Game', function() {
   for (w = 0; w < Game.map_grid.width; w++) {
     for (h = 0; h < Game.map_grid.height; h++) {
       Crafty.e('Tile').at(w, h).getColorRight();
-      Crafty.e('Gem, Draggable, Tween, 2D').at(w, h);
+      Crafty.e('Gem').at(w, h);
     }
   }
 });
