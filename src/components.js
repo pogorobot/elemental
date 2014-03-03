@@ -76,9 +76,6 @@ Crafty.c('Actor', {
   init: function() {
     this.requires('2D, Canvas, Grid');
   },
-  placeInRoom: function(room) {
-    this.room = room;
-  }
 });
 
 
@@ -138,8 +135,8 @@ function swap(gem, dir) {
   var props   = {};
 
   props[axis] = dist;
-  entity.lastTweenAxis = axis;
-  entity.lastTweenDist = entity[axis];
+  gem.lastTweenAxis = axis;
+  gem.lastTweenDist = gem[axis];
 
-  entity.tween(props, 500);
+  gem.tween(props, 500);
 }
