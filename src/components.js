@@ -14,11 +14,36 @@ Crafty.c('Tile', {
 });
 
 Crafty.c('Gem', {
-  init: function() {
-    this.requires('Actor, Swappable');
-    this._globalZ = 1;
-    this.requires(this.possible_sprites[Math.floor(Math.random() * this.possible_sprites.length)]);
-  },
+  init:         function() {
+                  this.requires('Actor, Motion, BoardGemProxy, Board, Draggable, Statable');
+                  this._globalZ = 1;
+                  this.requires(this.possible_sprites[Math.floor(Math.random() * this.possible_sprites.length)]);
+                  this.initStatable(this);
+                },
+  
+  gem:          function(board) {
+                  this.setBoard(board);
+                  this['original_x'] = this.x;
+                  this['original_y'] = this.y;
+                },
+
+  initStatable: function(gem) {
+                  var _prepareToAsk            = function() { return new function(){ gem.setDirection(); gem.disableDrag(); }; };
+                  var _setStateToCheckForMatch = function() { window.setTimeout(function(){gem.setState('checkForMatch');}, 550); };
+                  var _askToMove               = function() { gem.askToMove(gem.getBoard()); };
+                  var _checkForMatch           = function() { gem.checkForMatch(gem.getBoard()); };
+                  var _setStateToRemoving      = function() { gem.setState('removing'); };
+                  var _move                    = function() { gem.move(); };
+
+                  var states = [{name: "idle",          onSet: null,          nextState: null,                     event: null},
+                                {name: "askToMove",     onSet: _prepareToAsk, nextState: _askToMove,               event: "Dragging"},
+                                {name: "moving",        onSet: _move,         nextState: _setStateToCheckForMatch, event: null},
+                                {name: "checkForMatch", onSet: null,          nextState: _checkForMatch,           event: null},
+                                {name: "falling",       onSet: gem.fall,      nextState: _setStateToRemoving,      event: null},
+                                {name: "removing",      onSet: gem.remove,    nextState: null,                     event: null}];
+                  
+                  gem.addStates(states);
+                },
 
   possible_sprites: [
     'spr_air',
@@ -30,69 +55,96 @@ Crafty.c('Gem', {
   ]
 });
 
-Crafty.c('Swappable', {
-  init: function() {
-    this.requires('Actor, Draggable, Tween');
-    this.doneSwapping = false;
+Crafty.c('BoardGemProxy', {
+  init:           function() {
+                    this.requires('Motion, Statable');
+                    this.moveCount = 0;
+                  },
 
-    //bind events to swap on drag
-    this.bind('Dragging', function() {
-      this.disableDrag();
-      this.swap(this.getDirection());
-    });
-  },
+  setBoard:       function(board) {
+                    this.board = board;
+                  },
 
-  // Desc:   Grabs the direction this was moved.
-  // Return: Array Array [x_or_y_axis, postive_or_negative_1_for_direction_on_axis]
+  getBoard:       function() {
+                    return this.board;
+                  },
 
-  getDirection: function() {
-    if (Math.abs(this.y - this._oldY) > Math.abs(this.x - this._oldX)) {
-      if (this.y > this._oldY) {
-        return ['y', 1];
-      }
-      else {
-        return ['y', -1];
-      }
-    } else {
-      if (this.x > this._oldX) {
-        return ['x', 1];
-      }
-      else {
-        return ['x', -1];
-      }
-    }
-  },
+  askToMove:      function(board) {                    
+                    if(board.ask('move', this.direction, this.getId())) {
+                      this.moveCount = 1;
+                      this.setState('moving');
+                    }
+                  },
 
-  //TODO:    Finish the swap!
-  // Desc:   Swaps two gems placement based on direction 'dir'
-  //         If no gem adjacent to the one that was dragged, return.
-  // Params: 
-  //         - Array [x_or_y_axis, positive_or_negative_1_for_direction_on_axis]
-  swap: function(direction) {
-    if (this.doneSwapping) {
-      this.doneSwapping = false;
-      this.enableDrag();
-      this.unbind('TweenEnd');
-      return;
-    }
-    //x or y
-    var axis = direction[0];
-    //1 gem-width in the specified direction
-    var destination = this[axis] + (direction[1] * this.w);
-    //object that will specify what attributes to tween and what values to tween them to
-    var tweenTo = {};
-    tweenTo[axis] = destination;
+  checkForMatch: function(board) {
+                    if(this.moveCount >= 2) {
+                      this.moveCount = 0;
+                      this.enableDrag();
+                      this.setState('idle');
+                    } else if(board.ask('match', this.getId())) {
+                      this.setState('falling');
+                    } else {
+                      this.reverseDirection();
+                      this.moveCount = 2;
+                      this.setState('moving');
+                    } 
+                  },
+});
 
-    this.lastTweenAxis = axis;
-    this.lastTweenDist = this[axis];
+Crafty.c('Motion', {
+  init:             function() {
+                      this.requires('Actor, Draggable, Tween');
+                      this.time_to_tween = 500;
+                    },
 
-    this.tween(tweenTo, 500);
-    //Once you've gone over, come right back (for now)
-    this.bind('TweenEnd', function() {
-      this.swap([axis, direction[1] * -1]);
-      this.doneSwapping = true;
-    });
-  }
+  reverseDirection: function() {
+                      this.direction[1] *= -1;
+                    },
+
+  setSouth:         function() {
+                      this.direction = ['y', 1];
+                    },
+
+  setDirection:     function() {
+                      if (Math.abs(this.y - this._oldY) > Math.abs(this.x - this._oldX)) {
+                        if (this.y > this._oldY) {
+                          this.direction = ['y', 1];
+                        } else {
+                          this.direction = ['y', -1];
+                        }
+                      } else {
+                        if (this.x > this._oldX) {
+                          this.direction = ['x', 1];
+                        } else {
+                          this.direction = ['x', -1];
+                        }
+                      }
+                    },
+
+  move:             function() {
+                      var axis        = this.direction[0];
+                      var destination = this['original_' + axis] + (this.direction[1] * this.w);
+
+                      var tweenTo     = {};
+                      tweenTo[axis]   = destination;
+
+                      this.tween(tweenTo, this.time_to_tween);
+    
+                      this.lastTweenAxis       = axis;
+                      this.lastTweenDirection  = this.direction[1];
+                      this['original_' + axis] = destination;
+                    },
+
+  fall:             function() {
+                      this.setSouth();
+                      this.move();
+                      this.move();
+                      this.move();
+                    },
+
+  remove:           function() {
+                      //selfDESTRUCTTTTTT();
+                    },
 });
 
 //The Grid component allows an element to be located
@@ -129,13 +181,90 @@ Crafty.c('Actor', {
   },
 });
 
-// TODO:   Finish canMove
-// Desc:   Checks if there is an adjacent gem.
-// Params: 
-//         - Entity (Gem)
-//         - Array [x_or_y_axis, postive_or_negative_1_for_direction_on_axis]
-// Return: boolean
+Crafty.c('Statable', {
+  init:           function() {
+                    this.state  = '';
+                    this.states = {};
+                  },
 
-function canMove(gem, dir) {
-  //Me need some code
-}
+  addStates:      function(states) {
+                    for(var i = 0, z = states.length; i < z; i++) {
+                      this.addState(states[i]);
+                    }
+                  },
+
+  addState:       function(state) {
+                    this.states[state.name] = state;
+
+                    if(this.states[state.name].event !== null)
+                      this.bind(this.states[state.name].event, function(){this.setState(this.states[state.name].name);}); 
+                  },
+
+  getState:       function() {
+                    return this.states[this.state];
+                  },
+
+  setState:       function(newState){
+                    this.state = newState;
+
+                    this._onSetListener();
+                    this._nextState();
+                  },
+
+  _onSetListener: function() {
+                    if(typeof this.states[this.state].onSet === 'function') {
+                      this.states[this.state].onSet();
+                    }
+                  },
+
+  _nextState:     function() {
+                    if(typeof this.states[this.state].nextState === 'function') {
+                      this.states[this.state].nextState();
+                    }
+                  },
+});
+
+Crafty.c('Board', {
+  init:           function() {
+                    this.gems     = [];
+                    this.barriers = [];
+                    this.pieces   = this.gems + this.barriers;
+                  },
+
+  ask:            function() {
+                    var argumentArray = [].slice.apply(arguments); 
+                    var what = argumentArray[0];
+                    var args = argumentArray.slice(1, argumentArray.length);
+
+                    switch(what)
+                    {
+                    case 'move':
+                      return this._checkForSpace(args);
+                    case 'match':
+                      return this._checkForMatch(args);
+                    default: 
+                      console.log("Do something");
+                    }
+                  },
+
+  _checkForSpace: function(args) {                   
+                    var direction    = args[0];
+                    var id           = args[1];
+                    var multiplier   = (direction[0] === 'x') ? 16 : 2 //(8 Tiles + 8 Gems = NextSibling). 
+                    var targetId     = id + (direction[1] * multiplier); 
+                    var targetEntity = Crafty(targetId);
+       
+
+                    if(targetEntity.__c.Gem) {
+                      targetEntity.direction = [direction[0], direction[1] * -1];
+                      targetEntity.setState('moving');    
+                    }
+                    
+                    return true;
+                  },
+
+  _checkForMatch: function(args) {
+                    console.log("finish check for match function");
+                    return false;
+                  },
+});
