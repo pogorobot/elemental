@@ -15,9 +15,8 @@ Crafty.c('Tile', {
 
 Crafty.c('Gem', {
   init:         function() {
-                  this.requires('Actor, Motion, BoardGemProxy, Draggable, Statable');
+                  this.requires('Actor, Motion, BoardGemProxy, Draggable, Statable, RandomGemType');
                   this._globalZ = 1;
-                  this.requires(this.possible_sprites[Math.floor(Math.random() * this.possible_sprites.length)]);
                   this.initStatable(this);
                 },
   
@@ -46,14 +45,23 @@ Crafty.c('Gem', {
                   gem.state = 'idle'; //start idle
                 },
 
-  possible_sprites: [
-    'spr_air',
-    'spr_earth',
-    'spr_fire',
-    'spr_water',
-    'spr_metal',
-    'spr_wood',
+});
+
+Crafty.c('RandomGemType', {
+
+  init: function() {
+    this.requires(this.possible_types[Math.floor(Math.random() * this.possible_types.length)]);
+  },
+
+  possible_types: [
+    'Air',
+    'Earth',
+    'Fire',
+    'Water',
+    'Metal',
+    'Wood'
   ]
+
 });
 
 Crafty.c('BoardGemProxy', {
@@ -236,6 +244,8 @@ Crafty.c('Board', {
                     this.gems     = [];
                     this.barriers = [];
                     this.pieces   = this.gems + this.barriers;
+                    this.grid     = Game.map_grid;
+                    this.totalMatches = 0;
                   },
 
   ask:            function() {
@@ -274,7 +284,51 @@ Crafty.c('Board', {
                   },
 
   _checkForMatch: function(args) {
-                    console.log("finish check for match function");
+                    this.makeMatches();
                     return false;
                   },
+
+  makeMatches: function() {
+    console.log('Matching');
+    this.findAllGems();
+    for (var x = 0; x < this.grid.width - 2; x++) {
+      for (var y = 0; y < this.grid.height - 2; y++) {
+        gem = this.gemAt(x, y);
+        secondGem = this.gemAt(x + 1, y);
+        thirdGem = this.gemAt(x + 2, y);
+        this.tryMatching(gem, secondGem, thirdGem);
+        secondGem = this.gemAt(x, y + 1);
+        thirdGem = this.gemAt(x, y + 2);
+        this.tryMatching(gem, secondGem, thirdGem);
+      }
+    }
+    Crafty('Matched').destroy(); 
+  },
+
+  tryMatching: function(gem, secondGem, thirdGem) {
+    if (gem.gemType === secondGem.gemType && gem.gemType === thirdGem.gemType) {
+      gem.requires('Matched');
+      secondGem.requires('Matched');
+      thirdGem.requires('Matched');
+      this.totalMatches++;
+    }
+  },
+
+  gemAt: function(x, y) {
+    return this.gemLayout[x][y];
+  },
+
+  findAllGems: function() {
+    this.gemLayout = [];
+    for (var x = 0; x < this.grid.width; x++) {
+      this.gemLayout[x] = new Array(this.grid.height);
+    }
+    var gem;
+    var x;
+    var y;
+    //the 'each' function changes the meaning of 'this'
+    Crafty('Gem').each(function() {
+      this.board.gemLayout[this.at().x][this.at().y] = this;
+    });
+  },
 });

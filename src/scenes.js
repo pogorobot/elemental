@@ -46,4 +46,5 @@ Crafty.scene('Game', function() {
       Crafty.e('Gem').at(w, h).gem(board);
     }
   }
+  board.findAllGems();
 });
