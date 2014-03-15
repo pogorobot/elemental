@@ -15,7 +15,7 @@ Crafty.c('Tile', {
 
 Crafty.c('Gem', {
   init:         function() {
-                  this.requires('Actor, Motion, BoardGemProxy, Board, Draggable, Statable');
+                  this.requires('Actor, Motion, BoardGemProxy, Draggable, Statable');
                   this._globalZ = 1;
                   this.requires(this.possible_sprites[Math.floor(Math.random() * this.possible_sprites.length)]);
                   this.initStatable(this);
@@ -43,6 +43,7 @@ Crafty.c('Gem', {
                                 {name: "removing",      onSet: gem.remove,    nextState: null,                     event: null}];
                   
                   gem.addStates(states);
+                  gem.state = 'idle'; //start idle
                 },
 
   possible_sprites: [
@@ -69,10 +70,16 @@ Crafty.c('BoardGemProxy', {
                     return this.board;
                   },
 
-  askToMove:      function(board) {                    
+  askToMove:      function(board) {
                     if(board.ask('move', this.direction, this.getId())) {
                       this.moveCount = 1;
                       this.setState('moving');
+                    }
+                    else {
+                      this.x = this._oldX;
+                      this.y = this._oldY;
+                      this.setState('idle');
+                      this.enableDrag();
                     }
                   },
 
@@ -256,11 +263,14 @@ Crafty.c('Board', {
        
 
                     if(targetEntity.__c.Gem) {
-                      targetEntity.direction = [direction[0], direction[1] * -1];
-                      targetEntity.setState('moving');    
+                      if (targetEntity.state == 'idle') {
+                        targetEntity.direction = [direction[0], direction[1] * -1];
+                        targetEntity.setState('moving');
+                        targetEntity.disableDrag();
+                        return true;
+                      }
                     }
-                    
-                    return true;
+                    return false;
                   },
 
   _checkForMatch: function(args) {
