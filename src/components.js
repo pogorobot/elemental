@@ -72,6 +72,7 @@ Crafty.c('BoardGemProxy', {
 
   setBoard:       function(board) {
                     this.board = board;
+                    return this;
                   },
 
   getBoard:       function() {
@@ -151,10 +152,7 @@ Crafty.c('Motion', {
                     },
 
   fall:             function() {
-                      this.setSouth();
-                      this.move();
-                      this.move();
-                      this.move();
+                      this.requires('Falling');
                     },
 
   remove:           function() {
@@ -291,8 +289,8 @@ Crafty.c('Board', {
   makeMatches: function() {
     console.log('Matching');
     this.findAllGems();
-    for (var x = 0; x < this.grid.width - 2; x++) {
-      for (var y = 0; y < this.grid.height - 2; y++) {
+    for (var x = 0; x < this.grid.width; x++) {
+      for (var y = 0; y < this.grid.height; y++) {
         gem = this.gemAt(x, y);
         secondGem = this.gemAt(x + 1, y);
         thirdGem = this.gemAt(x + 2, y);
@@ -302,10 +300,12 @@ Crafty.c('Board', {
         this.tryMatching(gem, secondGem, thirdGem);
       }
     }
-    Crafty('Matched').destroy(); 
+    Crafty('Matched').destroy();
+    this.makeGemsFall();
   },
 
   tryMatching: function(gem, secondGem, thirdGem) {
+    if (gem === undefined || secondGem === undefined || thirdGem === undefined) { return; }
     if (gem.gemType === secondGem.gemType && gem.gemType === thirdGem.gemType) {
       gem.requires('Matched');
       secondGem.requires('Matched');
@@ -315,6 +315,7 @@ Crafty.c('Board', {
   },
 
   gemAt: function(x, y) {
+    if (x >= this.gemLayout.length || y >= this.gemLayout[0].length) { return; }
     return this.gemLayout[x][y];
   },
 
@@ -331,4 +332,26 @@ Crafty.c('Board', {
       this.board.gemLayout[this.at().x][this.at().y] = this;
     });
   },
+
+  makeGemsFall: function() {
+    this.findAllGems();
+    for (var y = this.grid.height - 1; y >= 0; y--) {
+      for (var x = 0; x < this.grid.width; x++) {
+        if (this.gemAt(x, y) === undefined) {
+          this.nextGemUpFrom(x, y).fall();
+        }
+      }
+    }
+    this.findAllGems();
+  },
+
+  nextGemUpFrom: function(x, y) {
+    while (y > 0) {
+      y--;
+      if (this.gemAt(x, y) != undefined && !this.gemAt(x, y).has('Falling')) {
+        return this.gemAt(x, y);
+      }
+    }
+    return Crafty.e('Gem').setBoard(this).at(x, y);
+  }
 });
